@@ -275,7 +275,7 @@ function EditRoleDialog({ admin, open, onClose, onSuccess }: EditRoleDialogProps
         </div>
         <DialogFooter>
           <Button onClick={handleSave} disabled={loading}>
-            Save Changes
+            Save Changes  
           </Button>
         </DialogFooter>
       </DialogContent>
