@@ -399,6 +399,170 @@ function ResetPinDialog({
   )
 }
 
+// ── Change Phone Dialog ────────────────────────────────────────────────────────
+
+function ChangePhoneDialog({
+  open, currentPhone, onClose, onConfirm,
+}: {
+  open: boolean; currentPhone?: string; onClose: () => void; onConfirm: (phone: string) => void
+}) {
+  const [phone, setPhone] = useState('')
+  function handleConfirm() { if (phone.trim()) { onConfirm(phone.trim()); setPhone('') } }
+  function handleClose() { setPhone(''); onClose() }
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-[#dbd861]" />
+            Change Phone Number
+          </DialogTitle>
+        </DialogHeader>
+        {currentPhone && (
+          <p className="text-xs text-muted-foreground -mt-1">
+            Current: <span className="font-medium text-foreground">{currentPhone}</span>
+          </p>
+        )}
+        <div className="space-y-1.5">
+          <Label>New Phone Number</Label>
+          <Input
+            type="tel"
+            placeholder="+2348012345678"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            The number will be marked as verified immediately.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleConfirm} disabled={!phone.trim()}>Save Phone</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── Force Set PIN Dialog ───────────────────────────────────────────────────────
+
+function ForceSetPinDialog({
+  open, onClose, onConfirm,
+}: {
+  open: boolean; onClose: () => void; onConfirm: (pin: string, confirm: string) => void
+}) {
+  const [pin, setPin] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const mismatch = confirm.length > 0 && pin !== confirm
+  function handleConfirm() { if (pin && pin === confirm) { onConfirm(pin, confirm); setPin(''); setConfirm('') } }
+  function handleClose() { setPin(''); setConfirm(''); onClose() }
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-[#dbd861]" />
+            Force Set PIN
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-1">
+          Sets a new PIN directly — no OTP required. All existing sessions will be revoked.
+        </p>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>New PIN</Label>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="4–6 digits"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Confirm PIN</Label>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="Repeat PIN"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ''))}
+              className={mismatch ? 'border-destructive' : ''}
+            />
+            {mismatch && <p className="text-xs text-destructive">PINs do not match</p>}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleConfirm} disabled={!pin || pin !== confirm || pin.length < 4}>
+            Set PIN
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── Update Onboarding Step Dialog ──────────────────────────────────────────────
+
+const ONBOARDING_STEPS = [
+  { value: 'PHONE',      label: 'PHONE',      description: 'Needs to add & verify phone' },
+  { value: 'PIN',        label: 'PIN',         description: 'Phone done — needs to set PIN' },
+  { value: 'BIOMETRICS', label: 'BIOMETRICS',  description: 'PIN done — biometrics prompt' },
+  { value: 'COMPLETE',   label: 'COMPLETE',    description: 'Fully onboarded' },
+]
+
+function UpdateOnboardingDialog({
+  open, currentStep, onClose, onConfirm,
+}: {
+  open: boolean; currentStep?: string; onClose: () => void; onConfirm: (step: string) => void
+}) {
+  const [step, setStep] = useState('')
+  function handleConfirm() { if (step) { onConfirm(step); setStep('') } }
+  function handleClose() { setStep(''); onClose() }
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-[#dbd861]" />
+            Change Onboarding Step
+          </DialogTitle>
+        </DialogHeader>
+        {currentStep && (
+          <p className="text-xs text-muted-foreground -mt-1">
+            Current step: <span className="font-medium text-foreground">{currentStep}</span>
+          </p>
+        )}
+        <div className="space-y-1.5">
+          <Label>New Step</Label>
+          <Select value={step} onValueChange={(v) => { if (v) setStep(v) }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select step…" />
+            </SelectTrigger>
+            <SelectContent>
+              {ONBOARDING_STEPS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  <div>
+                    <p className="font-medium">{s.label}</p>
+                    <p className="text-xs text-muted-foreground">{s.description}</p>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleConfirm} disabled={!step || step === currentStep}>Save Step</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Overview Tab ───────────────────────────────────────────────────────────────
 
 function OverviewTab({ user }: { user: UserData }) {
@@ -859,6 +1023,7 @@ function KycTab({ user, isSuperAdmin }: { user: UserData; isSuperAdmin: boolean 
     user.kyc?.addressVerified,
   ].filter(Boolean).length
 
+
   async function handleOverride() {
     if (!overrideDoc) return
     if (overrideAction === 'reject' && !overrideReason.trim()) {
@@ -1269,6 +1434,7 @@ export function UserDetail({ userId }: UserDetailProps) {
   const isSupportPlus = role === 'SUPER_ADMIN' || role === 'SUPPORT'
   const isSuperAdmin = role === 'SUPER_ADMIN'
 
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useUser(userId)
   const suspendMutation = useSuspendUser()
   const reactivateMutation = useReactivateUser()
@@ -1276,6 +1442,9 @@ export function UserDetail({ userId }: UserDetailProps) {
 
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [resetPinOpen, setResetPinOpen] = useState(false)
+  const [changePhoneOpen, setChangePhoneOpen] = useState(false)
+  const [forcePinOpen, setForcePinOpen] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
 
   const user: UserData | undefined = data as UserData | undefined
@@ -1313,6 +1482,39 @@ export function UserDetail({ userId }: UserDetailProps) {
         error: (err) => err?.response?.data?.message ?? 'Failed to send PIN reset OTP.',
       }
     )
+  }
+
+  async function handleChangePhone(phone: string) {
+    setChangePhoneOpen(false)
+    try {
+      await adminApi.patch(`/admin/users/${userId}/phone`, { phone })
+      toast.success('Phone number updated')
+      queryClient.invalidateQueries({ queryKey: ['user', userId] })
+    } catch (err: unknown) {
+      toast.error((err as any)?.response?.data?.message ?? 'Failed to update phone number')
+    }
+  }
+
+  async function handleForceSetPin(pin: string, confirmPin: string) {
+    setForcePinOpen(false)
+    try {
+      await adminApi.patch(`/admin/users/${userId}/pin`, { pin, confirmPin })
+      toast.success('PIN updated — all sessions revoked')
+      queryClient.invalidateQueries({ queryKey: ['user', userId] })
+    } catch (err: unknown) {
+      toast.error((err as any)?.response?.data?.message ?? 'Failed to set PIN')
+    }
+  }
+
+  async function handleUpdateOnboarding(step: string) {
+    setOnboardingOpen(false)
+    try {
+      await adminApi.patch(`/admin/users/${userId}/onboarding`, { step })
+      toast.success(`Onboarding step set to ${step}`)
+      queryClient.invalidateQueries({ queryKey: ['user', userId] })
+    } catch (err: unknown) {
+      toast.error((err as any)?.response?.data?.message ?? 'Failed to update onboarding step')
+    }
   }
 
   if (isLoading) return <UserDetailSkeleton />
@@ -1434,8 +1636,39 @@ export function UserDetail({ userId }: UserDetailProps) {
                       disabled={resetPinMutation.isPending}
                     >
                       <KeyRound className="h-4 w-4" />
-                      Reset PIN
+                      Reset PIN (OTP)
                     </Button>
+                  )}
+                  {isSuperAdmin && (
+                    <>
+                      <div className="border-t border-border pt-2 mt-1 space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1">Direct Override</p>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => setChangePhoneOpen(true)}
+                        >
+                          <Phone className="h-4 w-4" />
+                          Change Phone
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => setForcePinOpen(true)}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Force Set PIN
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => setOnboardingOpen(true)}
+                        >
+                          <Layers className="h-4 w-4" />
+                          Set Onboarding Step
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -1503,6 +1736,26 @@ export function UserDetail({ userId }: UserDetailProps) {
         phone={user.phone}
         onClose={() => setResetPinOpen(false)}
         onConfirm={handleResetPin}
+      />
+
+      <ChangePhoneDialog
+        open={changePhoneOpen}
+        currentPhone={user.phone}
+        onClose={() => setChangePhoneOpen(false)}
+        onConfirm={handleChangePhone}
+      />
+
+      <ForceSetPinDialog
+        open={forcePinOpen}
+        onClose={() => setForcePinOpen(false)}
+        onConfirm={handleForceSetPin}
+      />
+
+      <UpdateOnboardingDialog
+        open={onboardingOpen}
+        currentStep={user.onboardingStep}
+        onClose={() => setOnboardingOpen(false)}
+        onConfirm={handleUpdateOnboarding}
       />
     </>
   )

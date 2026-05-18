@@ -106,10 +106,10 @@ function AddAdminDialog({ open, onClose, onSuccess }: AddAdminDialogProps) {
   const [loading, setLoading] = useState(false)
 
   function validateEmail(val: string): boolean {
-    if (!val.endsWith('@gruuvypay.com')) {
-      setEmailError('Email must be a @gruuvypay.com address')
-      return false
-    }
+    // if (!val.endsWith('@gruuvypay.com')) {
+    //   setEmailError('Email must be a @gruuvypay.com address')
+    //   return false
+    // }
     setEmailError('')
     return true
   }
