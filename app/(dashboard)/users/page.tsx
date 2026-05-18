@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useUsers, useSuspendUser } from '@/hooks/useUsers'
 import { UserTable } from '@/components/users/UserTable'
@@ -34,9 +34,10 @@ export default function UsersPage() {
   const { data, isLoading } = useUsers(params)
   const suspendMutation = useSuspendUser()
 
-  const users = data?.data ?? data?.users ?? []
-  const total: number = data?.total ?? data?.meta?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // API returns { data: User[], meta: { total, page, limit, pages } }
+  const users = data?.data ?? []
+  const total: number = data?.meta?.total ?? 0
+  const totalPages = data?.meta?.pages ?? Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   function handleSuspend(id: string, reason: string) {
     toast.promise(

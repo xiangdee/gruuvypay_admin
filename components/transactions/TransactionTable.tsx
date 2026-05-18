@@ -1,4 +1,5 @@
 'use client'
+'use no memo'
 
 import React, { useState } from 'react'
 import {
@@ -9,7 +10,7 @@ import {
 } from '@tanstack/react-table'
 import { useRouter } from 'next/navigation'
 import { Copy, Eye, Pencil, Trash2, Check } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 import {
   Table,
@@ -23,35 +24,30 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 
+// Nested user shape from /admin/transactions
+interface TxUser {
+  id: string
+  firstName: string
+  lastName: string
+  username: string
+}
+
 export interface Transaction {
   id: string
   reference: string
-  user?: {
-    id?: string
-    name?: string
-    email?: string
-    tag?: string
-  } | string
+  user?: TxUser | string
   type: string
-  amount: number
-  status: string
+  amount: string       // pre-formatted "₦X,XXX.XX" from API
+  fee?: string         // pre-formatted "₦X,XXX.XX"
+  amountRaw?: string   // raw kobo value as string
+  status: string       // PENDING | SUCCESS | FAILED | REVERSED
   narration?: string
   metadata?: Record<string, unknown>
-  createdAt?: string
-  updatedAt?: string
+  created_at?: string  // API uses snake_case
+  updated_at?: string
+  createdAt?: string   // alias for compatibility
   auditAdmin?: string
   auditAt?: string
-  // bill fields
-  service?: string
-  provider?: string
-  phoneOrMeter?: string
-  electricityToken?: string
-  vtpassReference?: string
-  // crypto fields
-  symbol?: string
-  cryptoAmount?: number
-  ngnValue?: number
-  revenue?: number
 }
 
 interface TransactionTableProps {
@@ -72,7 +68,7 @@ function statusBadgeClass(status: string): string {
     case 'PENDING':
       return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
     case 'PROCESSING':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+      return 'bg-blue-100 text-[#C8FF57] dark:bg-blue-900/30 dark:text-blue-400'
     default:
       return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
   }
@@ -81,7 +77,7 @@ function statusBadgeClass(status: string): string {
 function typeBadgeClass(type: string): string {
   switch (type?.toUpperCase()) {
     case 'DEPOSIT':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+      return 'bg-blue-100 text-[#C8FF57] dark:bg-blue-900/30 dark:text-blue-400'
     case 'WITHDRAWAL':
       return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
     case 'TRANSFER':
@@ -97,8 +93,8 @@ function getUserDisplay(user: Transaction['user']): { name: string; tag: string;
   if (!user) return { name: '—', tag: '' }
   if (typeof user === 'string') return { name: user, tag: '' }
   return {
-    name: user.name || user.email || '—',
-    tag: user.tag ? `@${user.tag}` : user.email ? `@${user.email.split('@')[0]}` : '',
+    name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || '—',
+    tag: user.username ? `@${user.username}` : '',
     id: user.id,
   }
 }
@@ -184,7 +180,7 @@ export default function TransactionTable({
       header: 'Amount',
       cell: ({ row }) => (
         <span className="font-medium tabular-nums text-sm">
-          {formatCurrency(row.original.amount ?? 0)}
+          {row.original.amount ?? '—'}
         </span>
       ),
     },
@@ -206,7 +202,7 @@ export default function TransactionTable({
       id: 'date',
       header: 'Date',
       cell: ({ row }) => {
-        const raw = row.original.createdAt
+        const raw = row.original.created_at ?? row.original.createdAt
         return (
           <span className="text-sm text-muted-foreground whitespace-nowrap">
             {raw ? formatDate(raw) : '—'}
@@ -255,6 +251,7 @@ export default function TransactionTable({
     },
   ]
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: data ?? [],
     columns,

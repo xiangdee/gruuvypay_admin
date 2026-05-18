@@ -30,7 +30,7 @@ function CustomTooltip({ active, payload, label }: any) {
     <div className="rounded-lg border border-border bg-background p-3 shadow-md text-xs">
       <p className="font-semibold text-foreground mb-1">{label}</p>
       <div className="flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-blue-500" />
+        <span className="h-2 w-2 rounded-full bg-[#dbd861]" />
         <span className="text-muted-foreground">New Users:</span>
         <span className="font-medium text-foreground">{payload[0].value.toLocaleString()}</span>
       </div>
@@ -41,8 +41,9 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function UserGrowthChart({ data, loading = false }: UserGrowthChartProps) {
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle className="text-base">User Growth</CardTitle>
+        <p className="text-xs text-muted-foreground mt-0.5">New registrations per day</p>
       </CardHeader>
       <CardContent>
         {loading ? (

@@ -26,7 +26,7 @@ function statusBadgeClass(status: string): string {
     case 'PENDING':
       return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
     case 'PROCESSING':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+      return 'bg-blue-100 text-[#C8FF57] dark:bg-blue-900/30 dark:text-blue-400'
     default:
       return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
   }
@@ -35,7 +35,7 @@ function statusBadgeClass(status: string): string {
 function typeBadgeClass(type: string): string {
   switch (type?.toUpperCase()) {
     case 'DEPOSIT':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+      return 'bg-blue-100 text-[#C8FF57] dark:bg-blue-900/30 dark:text-blue-400'
     case 'WITHDRAWAL':
       return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
     case 'TRANSFER':
@@ -51,8 +51,8 @@ function getUserDisplay(user: Transaction['user']): { name: string; email: strin
   if (!user) return { name: '—', email: '—' }
   if (typeof user === 'string') return { name: user, email: '—' }
   return {
-    name: user.name || '—',
-    email: user.email || '—',
+    name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || '—',
+    email: (user as { email?: string }).email || `@${user.username}` || '—',
   }
 }
 
@@ -108,7 +108,7 @@ export default function TransactionDetail({ transaction, open, onClose }: Transa
           </DetailRow>
 
           <DetailRow label="Amount">
-            <span className="font-semibold tabular-nums">{formatCurrency(transaction.amount ?? 0)}</span>
+            <span className="font-semibold tabular-nums">{transaction.amount ?? '—'}</span>
           </DetailRow>
 
           {transaction.narration && (
@@ -130,7 +130,7 @@ export default function TransactionDetail({ transaction, open, onClose }: Transa
           </DetailRow>
 
           <DetailRow label="Updated At">
-            <span>{transaction.updatedAt ? formatDate(transaction.updatedAt) : '—'}</span>
+            <span>{transaction.updated_at ? formatDate(transaction.updated_at) : '—'}</span>
           </DetailRow>
 
           {transaction.auditAdmin && (

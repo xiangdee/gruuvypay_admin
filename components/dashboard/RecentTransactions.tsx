@@ -1,26 +1,26 @@
 'use client'
 
-import React from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import type React from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn, formatCurrency, formatRelativeDate } from '@/lib/utils'
+import { cn, formatRelativeDate } from '@/lib/utils'
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Zap } from 'lucide-react'
+
+interface TxUser {
+  id: string
+  firstName: string
+  lastName: string
+  username: string
+}
 
 interface Transaction {
-  id?: string
+  id: string
   reference: string
-  user?: { name?: string; email?: string } | string
+  user?: TxUser
   type: string
-  amount: number
-  status: string
-  createdAt?: string
-  date?: string
+  amount: string      // pre-formatted "₦X,XXX.XX"
+  status: string      // PENDING | SUCCESS | FAILED | REVERSED
+  narration?: string
+  created_at: string  // snake_case from Prisma
 }
 
 interface RecentTransactionsProps {
@@ -28,116 +28,111 @@ interface RecentTransactionsProps {
   loading?: boolean
 }
 
-function statusClass(status: string): string {
-  switch (status?.toUpperCase()) {
-    case 'SUCCESS':
-    case 'CREDIT':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    case 'FAILED':
-    case 'SUSPENDED':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-    case 'PENDING':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-    case 'ACTIVE':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-  }
+function getUserInitials(user?: TxUser): string {
+  if (!user) return '?'
+  const f = user.firstName?.[0] ?? ''
+  const l = user.lastName?.[0]  ?? ''
+  return (f + l).toUpperCase() || user.username?.[0]?.toUpperCase() || '?'
 }
 
-function typeClass(type: string): string {
-  switch (type?.toUpperCase()) {
-    case 'CRYPTO':
-      return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-    case 'BILL':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-  }
+function getUserName(user?: TxUser): string {
+  if (!user) return 'Unknown'
+  const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
+  return name || `@${user.username}` || 'Unknown'
 }
 
-function getUserName(user: Transaction['user']): string {
-  if (!user) return '—'
-  if (typeof user === 'string') return user
-  return user.name || user.email || '—'
+const TYPE_CFG: Record<string, { Icon: React.ComponentType<{ className?: string }>; iconColor: string; iconBg: string; amountClass: string }> = {
+  DEPOSIT:    { Icon: ArrowDownLeft,  iconColor: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-50 dark:bg-emerald-500/10', amountClass: 'text-emerald-600 dark:text-emerald-400' },
+  WITHDRAWAL: { Icon: ArrowUpRight,   iconColor: 'text-red-500 dark:text-red-400',         iconBg: 'bg-red-50 dark:bg-red-500/10',         amountClass: 'text-foreground' },
+  TRANSFER:   { Icon: ArrowLeftRight, iconColor: 'text-violet-600 dark:text-violet-400',   iconBg: 'bg-violet-50 dark:bg-violet-500/10',   amountClass: 'text-foreground' },
+  FEE:        { Icon: Zap,            iconColor: 'text-amber-600 dark:text-amber-400',      iconBg: 'bg-amber-50 dark:bg-amber-500/10',     amountClass: 'text-foreground' },
 }
 
-function getDate(tx: Transaction): string {
-  const raw = tx.createdAt || tx.date
-  if (!raw) return '—'
-  try {
-    return formatRelativeDate(raw)
-  } catch {
-    return raw
-  }
+const STATUS_CFG: Record<string, { dot: string; badge: string }> = {
+  SUCCESS:  { dot: 'bg-emerald-500', badge: 'border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+  FAILED:   { dot: 'bg-red-500',     badge: 'border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400'                         },
+  PENDING:  { dot: 'bg-amber-500',   badge: 'border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'             },
+  REVERSED: { dot: 'bg-violet-500',  badge: 'border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400'       },
+}
+
+function StatusPill({ status }: { status: string }) {
+  const s = status?.toUpperCase()
+  const cfg = STATUS_CFG[s] ?? { dot: 'bg-gray-400', badge: 'border-border bg-muted text-muted-foreground' }
+  return (
+    <span className={cn('inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', cfg.badge)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', cfg.dot)} />
+      {status}
+    </span>
+  )
 }
 
 export default function RecentTransactions({ transactions, loading = false }: RecentTransactionsProps) {
-  const skeletonRows = Array.from({ length: 10 })
+  if (loading) {
+    return (
+      <div className="divide-y divide-border">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-5 py-3.5">
+            <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+            <div className="text-right space-y-1.5 shrink-0">
+              <Skeleton className="h-3.5 w-20 ml-auto" />
+              <Skeleton className="h-4 w-14 ml-auto rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if ((transactions ?? []).length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+        No transactions yet
+      </div>
+    )
+  }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-36">Reference</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Date</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading
-            ? skeletonRows.map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                </TableRow>
-              ))
-            : (transactions ?? []).slice(0, 10).map((tx, i) => (
-                <TableRow key={tx.id ?? tx.reference ?? i}>
-                  <TableCell>
-                    <span className="font-mono text-xs truncate max-w-[7rem] block" title={tx.reference}>
-                      {tx.reference}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm">{getUserName(tx.user)}</TableCell>
-                  <TableCell>
-                    <span
-                      className={cn(
-                        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize',
-                        typeClass(tx.type)
-                      )}
-                    >
-                      {tx.type?.toLowerCase() ?? '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
-                    {formatCurrency(tx.amount)}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={cn(
-                        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold',
-                        statusClass(tx.status)
-                      )}
-                    >
-                      {tx.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                    {getDate(tx)}
-                  </TableCell>
-                </TableRow>
-              ))}
-        </TableBody>
-      </Table>
+    <div className="divide-y divide-border">
+      {(transactions ?? []).slice(0, 10).map((tx, i) => {
+        const cfg = TYPE_CFG[tx.type?.toUpperCase()] ?? TYPE_CFG['TRANSFER']
+        const { Icon, iconColor, iconBg, amountClass } = cfg
+        const isCredit = tx.type?.toUpperCase() === 'DEPOSIT'
+
+        return (
+          <div key={tx.id ?? i} className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/30 transition-colors">
+            {/* Avatar with type badge */}
+            <div className="relative shrink-0">
+              <div className="h-9 w-9 rounded-full bg-[#dbd861]/15 flex items-center justify-center text-xs font-bold text-[#0f0f0f] dark:text-[#dbd861]">
+                {getUserInitials(tx.user)}
+              </div>
+              <div className={cn('absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-background', iconBg)}>
+                <Icon className={cn('h-2.5 w-2.5', iconColor)} />
+              </div>
+            </div>
+
+            {/* Name + narration + date */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate leading-tight">{getUserName(tx.user)}</p>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{tx.narration ?? tx.reference}</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{tx.created_at ? formatRelativeDate(tx.created_at) : ''}</p>
+            </div>
+
+            {/* Amount + status */}
+            <div className="text-right shrink-0">
+              <p className={cn('text-sm font-semibold tabular-nums leading-tight', amountClass)}>
+                {isCredit ? '+' : ''}{tx.amount}
+              </p>
+              <div className="mt-1 flex justify-end">
+                <StatusPill status={tx.status} />
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

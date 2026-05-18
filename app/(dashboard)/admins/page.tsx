@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAdmin } from '@/hooks/useAdmin'
 import { useQueryClient } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { UserPlus, ShieldOff, Pencil, UserX } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -49,13 +49,15 @@ import { formatRelativeDate } from '@/lib/utils'
 
 type AdminRole = 'SUPER_ADMIN' | 'FINANCE' | 'SUPPORT'
 
+// Exact shape returned by GET /admin/admins
 interface AdminUser {
   id: string
   name: string
   email: string
   role: AdminRole
-  lastLogin: string | null
-  active: boolean
+  isActive: boolean
+  lastLoginAt: string | null
+  createdAt: string
 }
 
 function RoleBadge({ role }: { role: AdminRole }) {
@@ -63,7 +65,7 @@ function RoleBadge({ role }: { role: AdminRole }) {
     SUPER_ADMIN:
       'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
     FINANCE:
-      'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
+      'bg-blue-100 text-[#C8FF57] border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
     SUPPORT:
       'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400',
   }
@@ -282,8 +284,8 @@ function EditRoleDialog({ admin, open, onClose, onSuccess }: EditRoleDialogProps
 }
 
 export default function AdminsPage() {
-  const { data: session } = useSession()
-  const role = session?.user?.role
+  const admin = useAdmin()
+  const role = admin?.role
 
   const queryClient = useQueryClient()
   const { data: adminsData, isLoading } = useAdmins()
@@ -296,7 +298,8 @@ export default function AdminsPage() {
     return <AccessDenied />
   }
 
-  const admins: AdminUser[] = adminsData?.items ?? adminsData?.data ?? adminsData ?? []
+  // API returns the array directly
+  const admins: AdminUser[] = Array.isArray(adminsData) ? adminsData : []
 
   function handleSuccess() {
     queryClient.invalidateQueries({ queryKey: ['admins'] })
@@ -304,7 +307,7 @@ export default function AdminsPage() {
 
   async function handleDeactivate(admin: AdminUser) {
     try {
-      await adminApi.patch(`/admin/admins/${admin.id}`, { active: false })
+      await adminApi.post(`/admin/admins/${admin.id}/deactivate`)
       toast.success(`${admin.name} has been deactivated`)
       handleSuccess()
     } catch {
@@ -362,7 +365,7 @@ export default function AdminsPage() {
                           {admin.name.charAt(0)}
                         </div>
                         <span className="text-sm font-medium">{admin.name}</span>
-                        {!admin.active && (
+                        {!admin.isActive && (
                           <span className="text-xs text-red-500 italic">(inactive)</span>
                         )}
                       </div>
@@ -375,7 +378,7 @@ export default function AdminsPage() {
                     </TableCell>
                     <TableCell>
                       <span className="text-xs text-muted-foreground">
-                        {admin.lastLogin ? formatRelativeDate(admin.lastLogin) : 'Never'}
+                        {admin.lastLoginAt ? formatRelativeDate(admin.lastLoginAt) : 'Never'}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -398,7 +401,7 @@ export default function AdminsPage() {
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                disabled={!admin.active}
+                                disabled={!admin.isActive}
                               />
                             }
                           >

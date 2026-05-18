@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -173,7 +173,7 @@ function ResetPasswordInner() {
         </CardHeader>
         <CardContent>
           <Link href="/forgot-password">
-            <Button className="h-9 w-full bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700">
+            <Button className="h-9 w-full bg-[#dbd861] text-black hover:bg-[#dbd861] active:bg-[#C8FF57]">
               Request a new link
             </Button>
           </Link>
@@ -236,7 +236,7 @@ function ResetPasswordInner() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               disabled={resetStatus === "submitting"}
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-blue-500 focus-visible:ring-blue-500/20"
+              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#dbd861] focus-visible:ring-[#dbd861]/20"
             />
 
             {/* Requirements checklist */}
@@ -265,7 +265,7 @@ function ResetPasswordInner() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={resetStatus === "submitting"}
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-blue-500 focus-visible:ring-blue-500/20"
+              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#dbd861] focus-visible:ring-[#dbd861]/20"
             />
             {confirmPassword.length > 0 && !passwordsMatch && (
               <p className="text-xs text-red-400">Passwords do not match.</p>
@@ -275,7 +275,7 @@ function ResetPasswordInner() {
           <Button
             type="submit"
             disabled={!canSubmit}
-            className="h-9 w-full bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700 disabled:opacity-60"
+            className="h-9 w-full bg-[#dbd861] text-black hover:bg-[#dbd861] active:bg-[#C8FF57] disabled:opacity-60"
           >
             {resetStatus === "submitting" ? (
               <>

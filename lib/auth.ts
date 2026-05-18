@@ -1,8 +1,8 @@
-import { auth } from "@/auth"
+import { cookies } from "next/headers"
 
 export async function getAdminToken(): Promise<string | null> {
-  const session = await auth()
-  return session?.user?.token ?? null
+  const cookieStore = await cookies()
+  return cookieStore.get("admin_token")?.value ?? null
 }
 
 const ROLE_DISPLAY: Record<string, string> = {

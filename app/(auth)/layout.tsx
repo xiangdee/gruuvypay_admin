@@ -17,11 +17,11 @@ export default function AuthLayout({
     >
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dbd861]">
             <svg
               viewBox="0 0 24 24"
               fill="none"
-              className="h-5 w-5 text-white"
+              className="h-5 w-5 text-black"
               aria-hidden="true"
             >
               <path
@@ -42,7 +42,7 @@ export default function AuthLayout({
             GruuvyPay
           </span>
         </div>
-        <span className="text-xs font-medium tracking-widest text-blue-500 uppercase">
+        <span className="text-xs font-medium tracking-widest text-[#dbd861] uppercase">
           Admin Panel
         </span>
       </div>

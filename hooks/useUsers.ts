@@ -58,6 +58,22 @@ export function useReactivateUser() {
   })
 }
 
+export function useUserTransactions(userId: string, page = 1, limit = 10) {
+  return useQuery({
+    queryKey: ["user-transactions", userId, page],
+    queryFn: async () => {
+      const { data } = await adminApi.get(`/admin/users/${userId}/transactions`, {
+        params: { page, limit },
+      })
+      return data as {
+        data: import("@/components/transactions/TransactionTable").Transaction[]
+        meta: { total: number; page: number; limit: number; pages: number }
+      }
+    },
+    enabled: !!userId,
+  })
+}
+
 export function useResetUserPin() {
   const queryClient = useQueryClient()
   return useMutation({

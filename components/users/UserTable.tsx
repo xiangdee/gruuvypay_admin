@@ -1,4 +1,5 @@
 'use client'
+'use no memo'
 
 import { useState } from 'react'
 import {
@@ -27,19 +28,24 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { UserStatusBadge } from '@/components/users/UserStatusBadge'
-import { formatCurrency, formatRelativeDate } from '@/lib/utils'
+import { formatRelativeDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
-interface User {
+// Exact shape from GET /admin/users list — { data: User[], meta: {...} }
+export interface User {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   username: string
   email: string
   phone: string
   tier: string
-  status: string
-  walletBalance: number
-  createdAt: string
+  status: string      // 'ACTIVE' | 'SUSPENDED' | 'DELETED'
+  onboardingStep: string
+  created_at: string  // snake_case from Prisma User model
+  wallet: {
+    balance: string   // pre-formatted "₦X,XXX.XX" (only balance field in list)
+  } | null
 }
 
 interface UserTableProps {
@@ -56,28 +62,21 @@ const TIER_STYLES: Record<string, string> = {
 }
 
 function TierBadge({ tier }: { tier: string }) {
-  const styles = TIER_STYLES[tier] ?? TIER_STYLES['TIER_0']
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        styles
-      )}
-    >
+    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', TIER_STYLES[tier] ?? TIER_STYLES['TIER_0'])}>
       {tier}
     </span>
   )
 }
 
-function UserAvatar({ name }: { name: string }) {
-  const initials = name
-    .split(' ')
+function UserAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
+  const initials = [firstName, lastName]
     .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0].toUpperCase())
+    .map((n) => (n?.[0] ?? '').toUpperCase())
     .join('')
+    .slice(0, 2) || '?'
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dbd861] text-xs font-semibold text-white">
       {initials}
     </div>
   )
@@ -126,14 +125,8 @@ function SuspendDialog({
           className="min-h-24"
         />
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={!reason.trim()}
-          >
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button variant="destructive" onClick={handleConfirm} disabled={!reason.trim()}>
             Suspend
           </Button>
         </DialogFooter>
@@ -154,11 +147,12 @@ export function UserTable({ data, loading, onSuspend }: UserTableProps) {
       header: 'User',
       cell: ({ row }) => {
         const u = row.original
+        const fullName = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()
         return (
           <div className="flex items-center gap-3 min-w-0">
-            <UserAvatar name={u.name} />
+            <UserAvatar firstName={u.firstName ?? ''} lastName={u.lastName ?? ''} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">{u.name}</p>
+              <p className="truncate text-sm font-medium text-foreground">{fullName || '—'}</p>
               <p className="truncate text-xs text-muted-foreground">@{u.username}</p>
             </div>
           </div>
@@ -176,7 +170,7 @@ export function UserTable({ data, loading, onSuspend }: UserTableProps) {
       accessorKey: 'phone',
       header: 'Phone',
       cell: ({ getValue }) => (
-        <span className="text-sm text-muted-foreground">{getValue<string>()}</span>
+        <span className="text-sm text-muted-foreground">{getValue<string>() || '—'}</span>
       ),
     },
     {
@@ -190,20 +184,20 @@ export function UserTable({ data, loading, onSuspend }: UserTableProps) {
       cell: ({ getValue }) => <UserStatusBadge status={getValue<string>()} />,
     },
     {
-      accessorKey: 'walletBalance',
+      id: 'balance',
       header: 'Balance',
-      cell: ({ getValue }) => (
+      cell: ({ row }) => (
         <span className="text-sm font-medium tabular-nums">
-          {formatCurrency(getValue<number>() ?? 0)}
+          {row.original.wallet?.balance ?? '—'}
         </span>
       ),
     },
     {
-      accessorKey: 'createdAt',
+      id: 'joined',
       header: 'Joined',
-      cell: ({ getValue }) => (
+      cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {formatRelativeDate(getValue<string>())}
+          {formatRelativeDate(row.original.created_at)}
         </span>
       ),
     },
@@ -212,20 +206,17 @@ export function UserTable({ data, loading, onSuspend }: UserTableProps) {
       header: '',
       cell: ({ row }) => {
         const u = row.original
+        const fullName = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()
         return (
           <div className="flex items-center gap-2 justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => router.push(`/users/${u.id}`)}
-            >
+            <Button size="sm" variant="outline" onClick={() => router.push(`/users/${u.id}`)}>
               View
             </Button>
             <Button
               size="sm"
               variant="destructive"
-              onClick={() => setSuspendTarget({ id: u.id, name: u.name })}
-              disabled={u.status === 'suspended'}
+              onClick={() => setSuspendTarget({ id: u.id, name: fullName })}
+              disabled={u.status === 'SUSPENDED'}
             >
               Suspend
             </Button>
@@ -235,6 +226,7 @@ export function UserTable({ data, loading, onSuspend }: UserTableProps) {
     },
   ]
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -285,10 +277,7 @@ export function UserTable({ data, loading, onSuspend }: UserTableProps) {
               ))
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-32 text-center text-sm text-muted-foreground"
-                >
+                <TableCell colSpan={columns.length} className="h-32 text-center text-sm text-muted-foreground">
                   No users found.
                 </TableCell>
               </TableRow>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -115,14 +115,14 @@ export default function ForgotPasswordPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-blue-500 focus-visible:ring-blue-500/20"
+                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#dbd861] focus-visible:ring-[#dbd861]/20"
               />
             </div>
 
             <Button
               type="submit"
               disabled={isLoading || !email}
-              className="h-9 w-full bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700 disabled:opacity-60"
+              className="h-9 w-full bg-[#dbd861] text-black hover:bg-[#dbd861] active:bg-[#C8FF57] disabled:opacity-60"
             >
               {isLoading ? (
                 <>
@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
   return (
     <Card className="border-white/10 bg-white/5 text-white shadow-2xl">
       <CardHeader className="pb-2">
-        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600/20 ring-1 ring-blue-500/30">
+        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#dbd861]/20 ring-1 ring-[#dbd861]/30">
           <Mail className="h-5 w-5 text-blue-400" />
         </div>
         <CardTitle className="text-lg font-semibold text-white">
@@ -172,7 +172,7 @@ export default function ForgotPasswordPage() {
           type="button"
           onClick={handleResend}
           disabled={isLoading || resendCountdown > 0}
-          className="h-9 w-full bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700 disabled:opacity-60"
+          className="h-9 w-full bg-[#dbd861] text-black hover:bg-[#dbd861] active:bg-[#C8FF57] disabled:opacity-60"
         >
           {isLoading ? (
             <>

@@ -9,7 +9,8 @@ export interface TransactionParams {
   search?: string
   status?: string
   type?: string
-  [key: string]: unknown
+  from?: string
+  to?: string
 }
 
 export function useTransactions(params?: TransactionParams) {
@@ -62,11 +63,9 @@ export function useDeleteTransaction() {
 
 export function useBillTransactions(params?: Omit<TransactionParams, "type">) {
   return useQuery({
-    queryKey: ["transactions", "bill", params],
+    queryKey: ["transactions", "bills", params],
     queryFn: async () => {
-      const { data } = await adminApi.get("/admin/transactions", {
-        params: { ...params, type: "bill" },
-      })
+      const { data } = await adminApi.get("/admin/transactions/bills", { params })
       return data
     },
   })
@@ -76,9 +75,7 @@ export function useCryptoTransactions(params?: Omit<TransactionParams, "type">) 
   return useQuery({
     queryKey: ["transactions", "crypto", params],
     queryFn: async () => {
-      const { data } = await adminApi.get("/admin/transactions", {
-        params: { ...params, type: "crypto" },
-      })
+      const { data } = await adminApi.get("/admin/transactions/crypto", { params })
       return data
     },
   })

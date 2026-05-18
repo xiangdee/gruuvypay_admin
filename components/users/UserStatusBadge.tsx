@@ -2,35 +2,19 @@
 
 import { cn } from '@/lib/utils'
 
-interface UserStatusBadgeProps {
-  status: string
+const STATUS_CONFIG: Record<string, { label: string; dot: string; class: string }> = {
+  ACTIVE:    { label: 'Active',    dot: 'bg-emerald-500', class: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+  SUSPENDED: { label: 'Suspended', dot: 'bg-red-500',     class: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+  PENDING:   { label: 'Pending',   dot: 'bg-amber-500',   class: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
+  DELETED:   { label: 'Deleted',   dot: 'bg-gray-400',    class: 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' },
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  suspended: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  deactivated: 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  active: 'Active',
-  suspended: 'Suspended',
-  deactivated: 'Deactivated',
-}
-
-export function UserStatusBadge({ status }: UserStatusBadgeProps) {
-  const key = status?.toLowerCase() ?? ''
-  const styles = STATUS_STYLES[key] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400'
-  const label = STATUS_LABELS[key] ?? status
-
+export function UserStatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status?.toUpperCase()] ?? STATUS_CONFIG['PENDING']
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        styles
-      )}
-    >
-      {label}
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium', cfg.class)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', cfg.dot)} />
+      {cfg.label}
     </span>
   )
 }

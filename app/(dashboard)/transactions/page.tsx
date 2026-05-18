@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { Search, Download } from 'lucide-react'
 import {
   AlertDialog,
@@ -62,7 +62,7 @@ function exportCsv(data: Transaction[]) {
     tx.type,
     tx.amount,
     tx.status,
-    tx.createdAt ?? '',
+    tx.created_at ?? tx.createdAt ?? '',
   ])
   const csv = [headers, ...rows]
     .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -106,9 +106,10 @@ export default function TransactionsPage() {
   const { data: txData, isLoading } = useTransactions(params)
   const deleteMutation = useDeleteTransaction()
 
-  const transactions: Transaction[] = txData?.data ?? txData?.transactions ?? txData ?? []
-  const total: number = txData?.total ?? txData?.count ?? transactions.length
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // API returns { data: Transaction[], meta: { total, page, limit, pages } }
+  const transactions: Transaction[] = txData?.data ?? []
+  const total: number = txData?.meta?.total ?? 0
+  const totalPages = txData?.meta?.pages ?? Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const handleDelete = useCallback(async () => {
     if (!deleteTx || deleteConfirm !== 'DELETE') return

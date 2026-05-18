@@ -2,23 +2,33 @@
 
 import React from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
 
-interface BalanceAlertsProps {
-  vtpassBalance: number
-  quidaxBalance: number
-  vtpassThreshold?: number
-  quidaxThreshold?: number
+// VTpass = FLW balance: { available, availableFormatted, threshold, isLow, ... }
+interface VtpassData {
+  available?: number | null
+  availableFormatted?: string
+  threshold?: number
+  isLow?: boolean | null
+  error?: string
 }
 
-export default function BalanceAlerts({
-  vtpassBalance,
-  quidaxBalance,
-  vtpassThreshold = 50000,
-  quidaxThreshold = 150000,
-}: BalanceAlertsProps) {
-  const vtpassLow = vtpassBalance < vtpassThreshold
-  const quidaxLow = quidaxBalance < quidaxThreshold
+// Quidax balance: { balance, balanceFormatted, threshold, isLow, ... }
+interface QuidaxData {
+  balance?: number | null
+  balanceFormatted?: string
+  threshold?: number
+  isLow?: boolean | null
+  error?: string
+}
+
+interface BalanceAlertsProps {
+  vtpassData?: VtpassData
+  quidaxData?: QuidaxData
+}
+
+export default function BalanceAlerts({ vtpassData, quidaxData }: BalanceAlertsProps) {
+  const vtpassLow = vtpassData?.isLow === true
+  const quidaxLow = quidaxData?.isLow === true
 
   if (!vtpassLow && !quidaxLow) return null
 
@@ -29,13 +39,13 @@ export default function BalanceAlerts({
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
           <div>
             <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-              VTPass Balance Low
+              Flutterwave / VTPass Balance Low
             </p>
             <p className="text-sm text-red-600 dark:text-red-500">
               Current balance is{' '}
-              <span className="font-medium">{formatCurrency(vtpassBalance)}</span> — below the{' '}
-              <span className="font-medium">{formatCurrency(vtpassThreshold)}</span> threshold. Top
-              up to avoid service disruptions.
+              <span className="font-medium">{vtpassData?.availableFormatted ?? '—'}</span>
+              {vtpassData?.threshold ? ` — below the ₦${vtpassData.threshold.toLocaleString()} threshold` : ''}.
+              Top up to avoid service disruptions.
             </p>
           </div>
         </div>
@@ -50,9 +60,9 @@ export default function BalanceAlerts({
             </p>
             <p className="text-sm text-red-600 dark:text-red-500">
               Current balance is{' '}
-              <span className="font-medium">{formatCurrency(quidaxBalance)}</span> — below the{' '}
-              <span className="font-medium">{formatCurrency(quidaxThreshold)}</span> threshold. Top
-              up to avoid crypto transaction failures.
+              <span className="font-medium">{quidaxData?.balanceFormatted ?? '—'}</span>
+              {quidaxData?.threshold ? ` — below the ₦${quidaxData.threshold.toLocaleString()} threshold` : ''}.
+              Top up to avoid crypto transaction failures.
             </p>
           </div>
         </div>

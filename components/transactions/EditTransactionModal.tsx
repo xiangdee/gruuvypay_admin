@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { AlertTriangle } from 'lucide-react'
 import {
   Dialog,

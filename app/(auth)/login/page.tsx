@@ -3,8 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,14 +30,15 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
-        toast.error("Invalid credentials");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error((data as { message?: string }).message ?? "Invalid credentials");
       } else {
         router.push("/");
       }
@@ -75,7 +75,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-blue-500 focus-visible:ring-blue-500/20"
+              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-amber-300 focus-visible:ring-amber-300/20"
             />
           </div>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="border-white/10 bg-white/5 pr-10 text-white placeholder:text-white/30 focus-visible:border-blue-500 focus-visible:ring-blue-500/20"
+                className="border-white/10 bg-white/5 pr-10 text-white placeholder:text-white/30 focus-visible:border-amber-300 focus-visible:ring-amber-300/20"
               />
               <button
                 type="button"
@@ -122,7 +122,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="mt-1 h-9 w-full bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700 disabled:opacity-60"
+            className="mt-1 h-9 w-full bg-[#dbd861] text-black hover:bg-amber-300 active:bg-[#C8FF57] disabled:opacity-60"
           >
             {isLoading ? (
               <>

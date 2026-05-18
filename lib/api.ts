@@ -1,21 +1,22 @@
 import axios from "axios"
-
-let _token: string | null = null
-
-export function setToken(t: string): void {
-  _token = t
-}
+import { ApiLink } from "./constants/links"
 
 const adminApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: ApiLink,
   headers: {
     "Content-Type": "application/json",
   },
 })
 
 adminApi.interceptors.request.use((config) => {
-  if (_token) {
-    config.headers.Authorization = `Bearer ${_token}`
+  if (typeof window !== "undefined") {
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("admin_token="))
+      ?.split("=")[1]
+    if (token) {
+      config.headers.Authorization = `Bearer ${decodeURIComponent(token)}`
+    }
   }
   return config
 })
