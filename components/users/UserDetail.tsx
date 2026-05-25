@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAdmin } from '@/hooks/useAdmin'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -1429,6 +1430,7 @@ interface UserDetailProps {
 }
 
 export function UserDetail({ userId }: UserDetailProps) {
+  const router = useRouter()
   const admin = useAdmin()
   const role = admin?.role
   const isSupportPlus = role === 'SUPER_ADMIN' || role === 'SUPPORT'
@@ -1445,6 +1447,9 @@ export function UserDetail({ userId }: UserDetailProps) {
   const [changePhoneOpen, setChangePhoneOpen] = useState(false)
   const [forcePinOpen, setForcePinOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false)
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
 
   const user: UserData | undefined = data as UserData | undefined
@@ -1514,6 +1519,19 @@ export function UserDetail({ userId }: UserDetailProps) {
       queryClient.invalidateQueries({ queryKey: ['user', userId] })
     } catch (err: unknown) {
       toast.error((err as any)?.response?.data?.message ?? 'Failed to update onboarding step')
+    }
+  }
+
+  async function handleHardDelete() {
+    if (deleteConfirmEmail !== user?.email) return
+    setDeleteLoading(true)
+    try {
+      await adminApi.delete(`/admin/users/${userId}`)
+      toast.success('User permanently deleted')
+      router.push('/users')
+    } catch (err: unknown) {
+      toast.error((err as any)?.response?.data?.message ?? 'Failed to delete user')
+      setDeleteLoading(false)
     }
   }
 
@@ -1667,6 +1685,17 @@ export function UserDetail({ userId }: UserDetailProps) {
                           <Layers className="h-4 w-4" />
                           Set Onboarding Step
                         </Button>
+                        <div className="border-t border-border pt-2 mt-1">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">Danger Zone</p>
+                          <Button
+                            variant="destructive"
+                            className="w-full justify-start"
+                            onClick={() => { setDeleteUserOpen(true); setDeleteConfirmEmail('') }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete User
+                          </Button>
+                        </div>
                       </div>
                     </>
                   )}
@@ -1757,6 +1786,45 @@ export function UserDetail({ userId }: UserDetailProps) {
         onClose={() => setOnboardingOpen(false)}
         onConfirm={handleUpdateOnboarding}
       />
+
+      <AlertDialog open={deleteUserOpen} onOpenChange={(o) => { if (!o && !deleteLoading) { setDeleteUserOpen(false); setDeleteConfirmEmail('') } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" />
+              Permanently Delete User
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  This will <strong className="text-foreground">permanently delete</strong> <span className="font-medium text-foreground">{fullName}</span> and all associated data — transactions, sessions, KYC, wallets, and more.
+                </p>
+                <p>This action <strong className="text-destructive">cannot be undone</strong>. Type the user&apos;s email address to confirm:</p>
+                <p className="font-mono text-xs text-foreground bg-muted rounded px-2 py-1 inline-block">{user.email}</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmEmail}
+            onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+            placeholder={user.email}
+            className="font-mono text-sm"
+            disabled={deleteLoading}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading} onClick={() => { setDeleteUserOpen(false); setDeleteConfirmEmail('') }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleHardDelete}
+              disabled={deleteConfirmEmail !== user.email || deleteLoading}
+            >
+              {deleteLoading ? 'Deleting…' : 'Delete Permanently'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
