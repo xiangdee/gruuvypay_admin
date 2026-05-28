@@ -15,6 +15,7 @@ import {
   TrendingUp,
   BarChart3,
   ShieldCheck,
+  ShieldAlert,
   Settings,
   LogOut,
   Menu,
@@ -41,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Crypto',      href: '/crypto',       icon: Bitcoin,         roles: ['SUPER_ADMIN', 'FINANCE', 'SUPPORT'], indent: true },
   { label: 'Finance',     href: '/finance',      icon: TrendingUp,      roles: ['SUPER_ADMIN', 'FINANCE'] },
   { label: 'Analytics',   href: '/analytics',    icon: BarChart3,       roles: ['SUPER_ADMIN', 'FINANCE', 'SUPPORT'] },
+  { label: 'AML',         href: '/aml',          icon: ShieldAlert,     roles: ['SUPER_ADMIN', 'FINANCE'] },
   { label: 'Admin Users', href: '/admins',       icon: ShieldCheck,     roles: ['SUPER_ADMIN'] },
   { label: 'Settings',    href: '/settings',     icon: Settings,        roles: ['SUPER_ADMIN'] },
 ]

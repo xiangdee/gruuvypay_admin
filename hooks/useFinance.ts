@@ -176,3 +176,101 @@ export function useUpdateSettings() {
     },
   })
 }
+
+// ── AML ────────────────────────────────────────────────────────────────────
+
+export interface AmlFlagParams {
+  status?: string
+  userId?: string
+  page?:   number
+  limit?:  number
+}
+
+export interface AmlFlag {
+  id:             string
+  userId:         string
+  txRef:          string | null
+  txType:         string
+  ruleCode:       string
+  reason:         string
+  amountNgn:      string
+  status:         string
+  reviewedBy:     string | null
+  reviewedAt:     string | null
+  reviewNote:     string | null
+  reportedToNfiu: boolean
+  nfiuRef:        string | null
+  createdAt:      string
+  user: {
+    id:        string
+    firstName: string
+    lastName:  string
+    email:     string
+    tier:      string
+  }
+}
+
+export function useAmlFlags(params?: AmlFlagParams) {
+  return useQuery({
+    queryKey: ['aml', 'flags', params],
+    queryFn: async () => {
+      const { data } = await adminApi.get('/admin/aml/flags', { params })
+      return data as { flags: AmlFlag[]; total: number; page: number; pages: number }
+    },
+  })
+}
+
+export function useAmlFlag(flagId: string) {
+  return useQuery({
+    queryKey: ['aml', 'flag', flagId],
+    queryFn: async () => {
+      const { data } = await adminApi.get(`/admin/aml/flags/${flagId}`)
+      return data as AmlFlag
+    },
+    enabled: !!flagId,
+  })
+}
+
+export function useReviewAmlFlag() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      flagId:     string
+      status:     'CLEARED' | 'FILED'
+      reviewedBy: string
+      reviewNote: string
+      nfiuRef?:   string
+    }) => {
+      const { flagId, ...body } = payload
+      const { data } = await adminApi.patch(`/admin/aml/flags/${flagId}`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['aml'] })
+    },
+  })
+}
+
+export interface TravelRule {
+  id:                string
+  txRef:             string
+  userId:            string
+  originatorName:    string
+  beneficiaryName:   string
+  beneficiaryWallet: string
+  cryptoSymbol:      string
+  cryptoAmount:      string
+  amountNgn:         string
+  networkName:       string | null
+  createdAt:         string
+}
+
+export function useTravelRules(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: ['aml', 'travel-rules', params],
+    queryFn: async () => {
+      const { data } = await adminApi.get('/admin/aml/travel-rules', { params })
+      return data as { records: TravelRule[]; total: number; page: number; pages: number }
+    },
+  })
+}
