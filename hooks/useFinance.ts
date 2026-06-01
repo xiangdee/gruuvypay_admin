@@ -177,6 +177,71 @@ export function useUpdateSettings() {
   })
 }
 
+// ── Crypto spreads ─────────────────────────────────────────────────────────
+
+export function useCryptoSpreads() {
+  return useQuery({
+    queryKey: ['finance', 'crypto-spreads'],
+    queryFn: async () => {
+      const { data } = await adminApi.get('/admin/finance/crypto-spreads')
+      return data as { buySpread: number; sellSpread: number; buySpreadPercent: string; sellSpreadPercent: string }
+    },
+  })
+}
+
+export function useUpdateCryptoSpreads() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { buySpread: number; sellSpread: number }) => {
+      const { data } = await adminApi.patch('/admin/finance/crypto-spreads', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance', 'crypto-spreads'] })
+      queryClient.invalidateQueries({ queryKey: ['finance', 'revenue'] })
+    },
+  })
+}
+
+// ── Cashback settings ───────────────────────────────────────────────────────
+
+export type BillType = 'airtime' | 'data' | 'electricity' | 'cable_tv' | 'betting' | 'internet'
+
+export interface BillTypeConfig { enabled: boolean; percent: number | null }
+
+export interface CashbackSettings {
+  enabled: boolean
+  percent: number
+  perType: Record<BillType, BillTypeConfig>
+}
+
+export function useCashbackSettings() {
+  return useQuery({
+    queryKey: ['bills', 'cashback-settings'],
+    queryFn: async () => {
+      const { data } = await adminApi.get('/admin/bills/cashback-settings')
+      return data as CashbackSettings
+    },
+  })
+}
+
+export function useUpdateCashbackSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Partial<{
+      enabled: boolean
+      percent: number
+      perType: Partial<Record<BillType, { enabled?: boolean; percent?: number | null }>>
+    }>) => {
+      const { data } = await adminApi.patch('/admin/bills/cashback-settings', payload)
+      return data as CashbackSettings
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bills', 'cashback-settings'] })
+    },
+  })
+}
+
 // ── AML ────────────────────────────────────────────────────────────────────
 
 export interface AmlFlagParams {

@@ -5,14 +5,17 @@ import { useAdmin } from '@/hooks/useAdmin'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ShieldOff, RefreshCw, ExternalLink, TrendingUp,
-  Receipt, Bitcoin, Phone, Wallet, Users, Activity,
+  Receipt, Bitcoin, Phone, Wallet, Users, Activity, Save,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import {
   useVtpassBalance, useQuidaxBalance, useRevenue, useFinanceSummary,
+  useCryptoSpreads, useUpdateCryptoSpreads,
 } from '@/hooks/useFinance'
 
 type Period = 'week' | 'month' | 'year'
@@ -82,6 +85,7 @@ function ThresholdBar({ rawBalance, threshold, isLow }: {
 function FloatCard({
   title, balanceFormatted, ledgerFormatted, rawBalance,
   threshold, isLow, lastChecked, dashboardUrl, onRefresh, loading, error,
+  cryptoWallets,
 }: {
   title: string
   balanceFormatted?: string
@@ -94,6 +98,7 @@ function FloatCard({
   onRefresh: () => void
   loading: boolean
   error?: string
+  cryptoWallets?: { symbol: string; balance: string; locked: string }[]
 }) {
   function formatTs(s?: string) {
     if (!s) return 'Never'
@@ -135,6 +140,24 @@ function FloatCard({
               )}
             </div>
             <ThresholdBar rawBalance={rawBalance} threshold={threshold} isLow={isLow} />
+            {cryptoWallets && cryptoWallets.length > 0 && (
+              <div className="border-t border-border pt-3 space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Master Crypto Wallets</p>
+                {cryptoWallets.map((w) => (
+                  <div key={w.symbol} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">{w.symbol}</span>
+                    <span className="tabular-nums font-semibold">
+                      {parseFloat(w.balance) > 0
+                        ? parseFloat(w.balance).toFixed(6).replace(/\.?0+$/, '')
+                        : '0'}
+                      {parseFloat(w.locked) > 0 && (
+                        <span className="text-muted-foreground ml-1">({w.locked} locked)</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -339,10 +362,36 @@ export default function FinancePage() {
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<Period>('month')
 
-  const { data: flwData,    isLoading: flwLoading    } = useVtpassBalance()
-  const { data: quidaxData, isLoading: quidaxLoading } = useQuidaxBalance()
+  const { data: flwData,     isLoading: flwLoading     } = useVtpassBalance()
+  const { data: quidaxData,  isLoading: quidaxLoading  } = useQuidaxBalance()
   const { data: revenueData, isLoading: revenueLoading } = useRevenue({ period })
   const { data: summary,     isLoading: summaryLoading } = useFinanceSummary()
+  const { data: spreadsData, isLoading: spreadsLoading } = useCryptoSpreads()
+  const { mutateAsync: updateSpreads } = useUpdateCryptoSpreads()
+
+  const [buySpreadInput,  setBuySpreadInput]  = useState('')
+  const [sellSpreadInput, setSellSpreadInput] = useState('')
+  const [savingSpreads,   setSavingSpreads]   = useState(false)
+
+  // Populate inputs when data loads
+  if (spreadsData && buySpreadInput === '' && sellSpreadInput === '') {
+    setBuySpreadInput(((spreadsData.buySpread ?? 0.02)  * 100).toFixed(2))
+    setSellSpreadInput(((spreadsData.sellSpread ?? 0.015) * 100).toFixed(2))
+  }
+
+  async function saveSpreads() {
+    const buy  = parseFloat(buySpreadInput)  / 100
+    const sell = parseFloat(sellSpreadInput) / 100
+    if (isNaN(buy) || isNaN(sell) || buy < 0 || sell < 0) {
+      toast.error('Enter valid percentages'); return
+    }
+    setSavingSpreads(true)
+    try {
+      await updateSpreads({ buySpread: buy, sellSpread: sell })
+      toast.success('Spreads updated — takes effect on the next quote')
+    } catch { toast.error('Failed to update spreads') }
+    finally { setSavingSpreads(false) }
+  }
 
   if (role === 'SUPPORT') return <AccessDenied />
 
@@ -390,9 +439,82 @@ export default function FinancePage() {
             onRefresh={() => queryClient.invalidateQueries({ queryKey: ['finance', 'quidax-balance'] })}
             loading={quidaxLoading}
             error={quidaxData?.error}
+            cryptoWallets={quidaxData?.cryptoWallets}
           />
         </div>
       </section>
+
+      {/* ── Crypto Spreads ── */}
+      {(role === 'SUPER_ADMIN' || role === 'FINANCE') && (
+        <section>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Crypto Spreads</h2>
+          <Card className="max-w-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Buy / Sell Spread</CardTitle>
+              <CardDescription className="text-xs">
+                Margin applied to each swap. Changes take effect on the next quote — no restart needed.
+                Set to 0 to disable.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {spreadsLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Buy Spread %</label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.01"
+                          value={buySpreadInput}
+                          onChange={(e) => setBuySpreadInput(e.target.value)}
+                          className="pr-6"
+                          placeholder="2.00"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sell Spread %</label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.01"
+                          value={sellSpreadInput}
+                          onChange={(e) => setSellSpreadInput(e.target.value)}
+                          className="pr-6"
+                          placeholder="1.50"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Current: Buy {spreadsData?.buySpreadPercent ?? '—'} / Sell {spreadsData?.sellSpreadPercent ?? '—'}
+                    </p>
+                    {role === 'SUPER_ADMIN' && (
+                      <Button size="sm" onClick={saveSpreads} disabled={savingSpreads}>
+                        <Save className="h-3.5 w-3.5" />
+                        {savingSpreads ? 'Saving...' : 'Save'}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* ── Revenue Breakdown ── */}
       <section>
